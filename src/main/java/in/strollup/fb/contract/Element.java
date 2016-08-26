@@ -22,8 +22,11 @@ public class Element {
 	private String imageUrl;
 	@SerializedName("buttons")
 	@Expose
-	private List<Button> buttons; // = new ArrayList<Button>();
-
+	private List<Button> buttons; //= new ArrayList<Button>();
+	@SerializedName("message")
+	@Expose
+	private String message;
+	
 	/**
 	 * 
 	 * @return The title
@@ -91,7 +94,7 @@ public class Element {
 	public void setButtons(List<Button> buttons) {
 		this.buttons = buttons;
 	}
-
+	
 	@Override
 	public String toString() {
 		return ToStringBuilder.reflectionToString(this);

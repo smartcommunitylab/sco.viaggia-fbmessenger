@@ -23,6 +23,9 @@ public class Message {
 	@SerializedName("sticker_id")
 	@Expose
 	private Long stickerId;
+	@SerializedName("is_echo")
+	@Expose
+	private Boolean echo;
 	@SerializedName("attachments")
 	@Expose
 	private List<Attachment> attachments;
@@ -30,7 +33,17 @@ public class Message {
 	@SerializedName("attachment")
 	@Expose
 	private Attachment attachment;
-
+	
+	@SerializedName("quick_replies")
+	@Expose
+	private List<QuickReply> quick_replies;
+	
+	public List<QuickReply> getQuickReplies() {
+		return quick_replies;
+	}
+	public void setQuickReplies(List<QuickReply> quick_replies) {
+		this.quick_replies = quick_replies;
+	}
 	public Attachment getAttachment() {
 		return attachment;
 	}
@@ -106,6 +119,18 @@ public class Message {
 		return attachments;
 	}
 
+	public Boolean isEcho() {
+		return echo;
+	}
+	public void setEcho(Boolean echo) {
+		this.echo = echo;
+	}
+	public List<QuickReply> getQuick_replies() {
+		return quick_replies;
+	}
+	public void setQuick_replies(List<QuickReply> quick_replies) {
+		this.quick_replies = quick_replies;
+	}
 	/**
 	 * 
 	 * @param attachments
@@ -122,7 +147,7 @@ public class Message {
 
 	@Override
 	public int hashCode() {
-		return new HashCodeBuilder().append(mid).append(seq).append(stickerId).append(attachments).toHashCode();
+		return new HashCodeBuilder().append(mid).append(seq).append(stickerId).append(attachments).append(quick_replies).toHashCode();
 	}
 
 	@Override
@@ -135,7 +160,7 @@ public class Message {
 		}
 		Message rhs = ((Message) other);
 		return new EqualsBuilder().append(mid, rhs.mid).append(seq, rhs.seq).append(stickerId, rhs.stickerId)
-				.append(attachments, rhs.attachments).isEquals();
+				.append(attachments, rhs.attachments).append(quick_replies, rhs.quick_replies).isEquals();
 	}
 
 }

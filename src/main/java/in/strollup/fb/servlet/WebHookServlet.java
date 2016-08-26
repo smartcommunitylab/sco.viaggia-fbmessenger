@@ -32,15 +32,14 @@ import com.google.gson.Gson;
  * 
  *
  */
-public class WebHookServlet extends HttpServlet {
+public class WebHookServlet extends HttpServlet {	
 
 	private static final long serialVersionUID = -2326475169699351010L;
 
 	/************* FB Chat Bot variables *************************/
-	public static final String PAGE_TOKEN = "EAAIVCDG5rTYBAP28b9EPRniZCv5RxWoogxQvn9WruFS2DpEn9Mi6LX4JROcAZAnjsu5wFTICjH3ZAnPzIBvoI0c7Emczlj4xYe6FRYEI7kbITd6p8j5a29mw376HBfHNszqRIkSzonswf6z0kZAEItrMFagaGlb22eqQpmVocwZDZD";
+	public static final String PAGE_TOKEN = "EAAXz3s158p4BAFZCBKgjtYjbfL814hvn2mLUGoQ4X8YZCKIaJk8lw9bxPKDX3Db6XjgyCvAMVoUTxvkZCV1WYDZBuF3HRW5KPnLMGn6ab0KmhMuUWcnmp44cv2E5VQFu8rzproRDtEe4c7OevVJzNMsZBhfPGZBpDL2Va9SoLbpgZDZD";
 	private static final String VERIFY_TOKEN = "whatever_string_you_or_your_friends_wish";
-	private static final String FB_MSG_URL = "https://graph.facebook.com/v2.6/me/messages?access_token="
-			+ PAGE_TOKEN;
+	private static final String FB_MSG_URL = "https://graph.facebook.com/v2.6/me/messages?access_token=" + PAGE_TOKEN;
 	/*************************************************************/
 
 	/******* for making a post call to fb messenger api **********/
@@ -50,8 +49,7 @@ public class WebHookServlet extends HttpServlet {
 	/*************************************************************/
 
 	@Override
-	protected void doPost(HttpServletRequest request,
-			HttpServletResponse response) throws ServletException, IOException {
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		processRequest(request, response);
 	}
 
@@ -59,47 +57,45 @@ public class WebHookServlet extends HttpServlet {
 	 * get method is used by fb messenger to verify the webhook
 	 */
 	@Override
-	public void doGet(HttpServletRequest request, HttpServletResponse response)
-			throws ServletException, IOException {
+	public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		String queryString = request.getQueryString();
 		String msg = "Error, wrong token";
 
 		if (queryString != null) {
 			String verifyToken = request.getParameter("hub.verify_token");
 			String challenge = request.getParameter("hub.challenge");
-			// String mode = request.getParameter("hub.mode");
 
-			if (StringUtils.equals(VERIFY_TOKEN, verifyToken)
-					&& !StringUtils.isEmpty(challenge)) {
+			if (StringUtils.equals(VERIFY_TOKEN, verifyToken) && !StringUtils.isEmpty(challenge)) {
 				msg = challenge;
-			} else {
+			} else 
+			{
 				msg = "";
 			}
 		} else {
-			System.out
-					.println("Exception no verify token found in querystring:"
-							+ queryString);
+			System.out.println("Exception no verify token found in querystring:" + queryString);
 		}
 
 		response.getWriter().write(msg);
 		response.getWriter().flush();
 		response.getWriter().close();
 		response.setStatus(HttpServletResponse.SC_OK);
+		
 		return;
 	}
 
-	private void processRequest(HttpServletRequest httpRequest,
-			HttpServletResponse response) throws IOException, ServletException {
+	private void processRequest(HttpServletRequest httpRequest, HttpServletResponse response) throws IOException, ServletException {
 		/**
 		 * store the request body in stringbuffer
 		 */
 		StringBuffer jb = new StringBuffer();
 		String line = null;
+		
 		try {
 			BufferedReader reader = httpRequest.getReader();
 			while ((line = reader.readLine()) != null)
 				jb.append(line);
-		} catch (Exception e) {
+		} 
+		catch (Exception e) {
 			e.printStackTrace();
 		}
 
@@ -113,18 +109,19 @@ public class WebHookServlet extends HttpServlet {
 			response.setStatus(HttpServletResponse.SC_OK);
 			return;
 		}
-		List<Messaging> messagings = fbMsgRequest.getEntry().get(0)
-				.getMessaging();
+		List<Messaging> messagings = fbMsgRequest.getEntry().get(0).getMessaging();
+		
 		for (Messaging event : messagings) {
 			String sender = event.getSender().getId();
-			if (event.getMessage() != null
-					&& event.getMessage().getText() != null) {
+			if (event.getMessage() != null && event.getMessage().getText() != null) {
 				String text = event.getMessage().getText();
-				sendTextMessage(sender, text, false);
+				System.out.println("text received: " + text);
+				if (!Boolean.TRUE.equals(event.getMessage().isEcho()))
+					sendTextMessage(sender, text, false);
 			} else if (event.getPostback() != null) {
 				String text = event.getPostback().getPayload();
-				System.out.println("postback received: " + text);
-				sendTextMessage(sender, text, true);
+				System.out.println("Postback received: " + text);
+					sendTextMessage(sender, text, true);
 			}
 		}
 		response.setStatus(HttpServletResponse.SC_OK);
@@ -138,17 +135,20 @@ public class WebHookServlet extends HttpServlet {
 	 * @param text
 	 * @param isPostBack
 	 */
-	private void sendTextMessage(String senderId, String text,
-			boolean isPostBack) {
+	
+	public void sendTextMessage(String senderId, String text, boolean isPostBack) {
 		List<String> jsonReplies = null;
+		
 		if (isPostBack) {
 			jsonReplies = helper.getPostBackReplies(senderId, text);
-		} else {
+		} 
+		else {
 			jsonReplies = helper.getReplies(senderId, text);
 		}
 
 		for (String jsonReply : jsonReplies) {
 			try {
+				System.out.println("jsonreplies:" + jsonReply);
 				HttpEntity entity = new ByteArrayEntity(
 						jsonReply.getBytes("UTF-8"));
 				httppost.setEntity(entity);
@@ -162,10 +162,9 @@ public class WebHookServlet extends HttpServlet {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-
 		}
 	}
-
+	
 	@Override
 	public void destroy() {
 		System.out.println("webhook Servlet Destroyed");

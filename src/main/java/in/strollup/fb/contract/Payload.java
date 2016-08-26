@@ -20,6 +20,9 @@ public class Payload {
 	@SerializedName("elements")
 	@Expose
 	private List<Element> elements;
+	@SerializedName("messages")
+	@Expose
+	private List<Message> messages;
 	@SerializedName("buttons")
 	@Expose
 	private List<Button> buttons;
@@ -73,7 +76,12 @@ public class Payload {
 	public void setElements(List<Element> elements) {
 		this.elements = elements;
 	}
-
+	public List<Message> getMessages() {
+		return messages;
+	}
+	public void setMessages(List<Message> messages) {
+		this.messages = messages;
+	}
 	@Override
 	public String toString() {
 		return ToStringBuilder.reflectionToString(this);
@@ -81,7 +89,7 @@ public class Payload {
 
 	@Override
 	public int hashCode() {
-		return new HashCodeBuilder().append(templateType).append(elements).toHashCode();
+		return new HashCodeBuilder().append(templateType).append(elements).append(messages).toHashCode();
 	}
 
 	@Override
@@ -93,7 +101,7 @@ public class Payload {
 			return false;
 		}
 		Payload rhs = ((Payload) other);
-		return new EqualsBuilder().append(templateType, rhs.templateType).append(elements, rhs.elements).isEquals();
+		return new EqualsBuilder().append(templateType, rhs.templateType).append(elements, rhs.elements).append(messages, rhs.messages).isEquals();
 	}
 
 }
