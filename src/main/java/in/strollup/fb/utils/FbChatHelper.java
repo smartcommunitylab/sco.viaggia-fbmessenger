@@ -280,7 +280,7 @@ public class FbChatHelper {
 				chatContext.trainID = "TB_R2_G";
 				break;
 			}
-			case " Bassano.d.G - Trento":{
+			case "Bassano.d.G - Trento":{
 				chatContext.trainID = "TB_R2_R";
 				break;
 			}
@@ -375,7 +375,7 @@ public class FbChatHelper {
 		List<String> stops = new ArrayList<String>();
 		/*String link = StringUtils.replace(profileLink, "SENDER_ID", senderId);
 		FbProfile profile = getObjectFromUrl(link, FbProfile.class);*/
-
+		
 		//Se l'utente manda un messaggio prima di aver scelto qualcosa dal menu genera un messaggio di errore
 		if(chatContext.context.equals("generale")){
 			replies.add(makeMessage(senderId, "Comando non riconosciuto"));	
