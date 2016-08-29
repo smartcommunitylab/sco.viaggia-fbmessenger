@@ -37,7 +37,7 @@ public class WebHookServlet extends HttpServlet {
 	private static final long serialVersionUID = -2326475169699351010L;
 
 	/************* FB Chat Bot variables *************************/
-	public static final String PAGE_TOKEN = "EAAXz3s158p4BAFZCBKgjtYjbfL814hvn2mLUGoQ4X8YZCKIaJk8lw9bxPKDX3Db6XjgyCvAMVoUTxvkZCV1WYDZBuF3HRW5KPnLMGn6ab0KmhMuUWcnmp44cv2E5VQFu8rzproRDtEe4c7OevVJzNMsZBhfPGZBpDL2Va9SoLbpgZDZD";
+	public static final String PAGE_TOKEN = "EAAXz3s158p4BAFDatZC5SCVpElg3UUdKDLDspBbn672w8UzfVIg85Ixp49stZBh4VdiVXKEbTZANot8J1SBy4kgfxV65mEpgw5JtOtiy4QFOZB0x53nZCcTE8Bx7ZAdkxoyeisPgmgtdqG1mUaujzZCcGmOwyBs7MYpTxoFsrjxGwZDZD";
 	private static final String VERIFY_TOKEN = "whatever_string_you_or_your_friends_wish";
 	private static final String FB_MSG_URL = "https://graph.facebook.com/v2.6/me/messages?access_token=" + PAGE_TOKEN;
 	/*************************************************************/
@@ -102,8 +102,10 @@ public class WebHookServlet extends HttpServlet {
 		/**
 		 * convert the string request body in java object
 		 */
-		FbMsgRequest fbMsgRequest = new Gson().fromJson(jb.toString(),
-				FbMsgRequest.class);
+		FbMsgRequest fbMsgRequest = new Gson().fromJson(jb.toString(),FbMsgRequest.class);
+		
+		System.out.println("New message: "+ jb.toString());
+		
 		if (fbMsgRequest == null) {
 			System.out.println("fbMsgRequest was null");
 			response.setStatus(HttpServletResponse.SC_OK);
