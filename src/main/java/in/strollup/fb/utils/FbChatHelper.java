@@ -47,9 +47,6 @@ public class FbChatHelper {
 	private static List<Message> messaggiQuick;
 	private static List<String> busMonodirezionali;
 	private static List<String> menuVoice;
-	private static List<TaxiContact> tmpTaxi;
-	private static List<Parking> tmpParcheggi;
-	private static List<Parking> tmpParcheggibici;
 	
 	private static List<TitleSubTitle> optiontaxi,optionparcheggi,optionparcheggibici;
 	private static List<Message> messaggiQuickTreni;
@@ -67,7 +64,7 @@ public class FbChatHelper {
 		private List<TaxiContact> taxi = new ArrayList<TaxiContact>();
 		private TimeTable treni = new TimeTable();
 		private List<Parking> parcheggi = new ArrayList<Parking>();
-		private List<Parking> parcheggibici = new ArrayList<Parking>();
+		private List<Parking> parcheggiBici = new ArrayList<Parking>();
 		private String fascia;
 	}
 
@@ -120,53 +117,6 @@ public class FbChatHelper {
 		TitleSubTitle MENU_AUTOBUS = new TitleSubTitle();
 		MENU_AUTOBUS.setTitle("Vuoi accedere alla sezione autobus o funivia?");
 		option.add(MENU_AUTOBUS);
-		
-		//Schede per i taxi
-		tmpTaxi = new ArrayList<TaxiContact>();
-		try {
-			tmpTaxi = Database.getTaxiContacts();
-		} catch (ExecutionException e) {	
-			e.printStackTrace();
-		}
-		
-		for(int i = 0; i < tmpTaxi.size(); i++){
-			TitleSubTitle TAXI = new TitleSubTitle();
-			TAXI.setTitle(tmpTaxi.get(i).getName());
-			optiontaxi.add(TAXI);
-		}
-
-		//Schede per i parcheggi
-		tmpParcheggi = new ArrayList<Parking>();
-		try {
-			tmpParcheggi = Database.getParkings();
-		} catch (ExecutionException e) {
-			e.printStackTrace();
-		}
-		for(int i = 0; i < tmpParcheggi.size(); i++){
-			TitleSubTitle PARCHEGGI = new TitleSubTitle();
-			PARCHEGGI.setTitle(tmpParcheggi.get(i).getName()+": "+	tmpParcheggi.get(i).getDescription());
-			if(tmpParcheggi.get(i).getSlotsAvailable()==-2){
-				PARCHEGGI.setSubTitle("posti totali: " +	tmpParcheggi.get(i).getSlotsTotal());
-			}
-			else{
-				PARCHEGGI.setSubTitle("posti diponibili: " + tmpParcheggi.get(i).getSlotsAvailable() + "    posti totali: " + tmpParcheggi.get(i).getSlotsTotal());
-			}
-				optionparcheggi.add(PARCHEGGI);
-		}
-
-		//Schede per il bikesharing 
-		tmpParcheggibici = new ArrayList<Parking>();
-		try {
-			tmpParcheggibici = Database.getBikeSharings();
-		} catch (ExecutionException e) {
-			e.printStackTrace();
-		}
-		for(int i = 0; i < tmpParcheggibici.size(); i++){
-			TitleSubTitle PARCHEGGI =new TitleSubTitle();
-			PARCHEGGI.setTitle(tmpParcheggibici.get(i).getName() + ": " + tmpParcheggibici.get(i).getDescription());
-			PARCHEGGI.setSubTitle("biciclette: " + tmpParcheggibici.get(i).getSlotsAvailable() + "    posti liberi: " + tmpParcheggibici.get(i).getSlotsTotal());
-			optionparcheggibici.add(PARCHEGGI);
-		}
 
 		//QuickReplies per i treni
 		Message QTRENI = new Message();
@@ -192,7 +142,49 @@ public class FbChatHelper {
 		}
 	}
 
-
+	/**
+	 * Inizializza le schede per i parcheggi
+	 * @param parcheggi
+	 */
+	private void setParcheggi(List<Parking> parcheggi){
+		for(int i = 0; i < parcheggi.size(); i++){
+			TitleSubTitle PARCHEGGI = new TitleSubTitle();
+			PARCHEGGI.setTitle(parcheggi.get(i).getName()+": "+	parcheggi.get(i).getDescription());
+			
+			if(parcheggi.get(i).getSlotsAvailable()==-2){
+				PARCHEGGI.setSubTitle("posti totali: " +	parcheggi.get(i).getSlotsTotal());
+			}
+			else{
+				PARCHEGGI.setSubTitle("posti diponibili: " + parcheggi.get(i).getSlotsAvailable() + "    posti totali: " + parcheggi.get(i).getSlotsTotal());
+			}
+				optionparcheggi.add(PARCHEGGI);
+		}
+	}
+	
+	/**
+	 * Inizializza le schede per i taxi
+	 * @param taxi
+	 */
+	private void setTaxi(List<TaxiContact> taxi){
+		for(int i = 0; i < taxi.size(); i++){
+			TitleSubTitle TAXI = new TitleSubTitle();
+			TAXI.setTitle(taxi.get(i).getName());
+			optiontaxi.add(TAXI);
+		}
+	}
+	
+	/**
+	 * Inizializza le schede per i parcheggi delle bici condivise
+	 * @param parcheggiBici
+	 */
+	private void setParcheggiBici(List<Parking> parcheggiBici){
+		for(int i = 0; i < parcheggiBici.size(); i++){
+			TitleSubTitle PARCHEGGI =new TitleSubTitle();
+			PARCHEGGI.setTitle(parcheggiBici.get(i).getName() + ": " + parcheggiBici.get(i).getDescription());
+			PARCHEGGI.setSubTitle("biciclette: " + parcheggiBici.get(i).getSlotsAvailable() + "    posti liberi: " + parcheggiBici.get(i).getSlotsTotal());
+			optionparcheggibici.add(PARCHEGGI);
+		}
+	}
 	/**
 	 * methods which analyze the postbacks ie. the button clicks sent by
 	 * senderId and replies according to it.
@@ -251,7 +243,7 @@ public class FbChatHelper {
 		
 		//stampa le card relative ai parcheggi delle bici condivise disponibili
 		if(chatContext.context.equals("MENU_BICI_1")){
-			for(; chatContext.index < chatContext.parcheggibici.size(); chatContext.index++)
+			for(; chatContext.index < chatContext.parcheggiBici.size(); chatContext.index++)
 				postbackReplies.add(makeCards(senderId, getParcheggiBici(chatContext)));
 			
 			postbackReplies.add(makeMessage(senderId, "Seleziona una voce del menù per scegliere che servizio utilizzare"));
@@ -266,6 +258,9 @@ public class FbChatHelper {
 		return postbackReplies;
 	}
 
+	/**
+	 * Restituisce l'Id del treno
+	 */
 	public void trainId(String senderId, String text, ChatContext chatContext){
 		switch(text){
 			case "Bolzano - Verona":{
@@ -307,6 +302,11 @@ public class FbChatHelper {
 		return chatContext;
 	}
 
+	/**
+	 * Inizializza il contesto selezionato dall'utente
+	 * @param chatContext
+	 * @param text
+	 */
 	public void menuChoise(ChatContext chatContext, String text){	
 		switch(text)
 		{
@@ -319,6 +319,7 @@ public class FbChatHelper {
 				e.printStackTrace();
 				}
 				
+				setTaxi(chatContext.taxi);
 				chatContext.context = "MENU_TAXI_1";
 				break;
 			}
@@ -341,6 +342,7 @@ public class FbChatHelper {
 					e.printStackTrace();
 				}
 				
+				setParcheggi(chatContext.parcheggi);
 				chatContext.context = "MENU_PARCHEGGI_1";
 				break;
 			}
@@ -348,11 +350,12 @@ public class FbChatHelper {
 				chatContext.index = 0;
 				
 				try {
-					chatContext.parcheggibici = Database.getBikeSharings();
+					chatContext.parcheggiBici = Database.getBikeSharings();
 				} catch (ExecutionException e) {
 					e.printStackTrace();
 				}
 				
+				setParcheggiBici(chatContext.parcheggiBici);
 				chatContext.context = "MENU_BICI_1";
 				break;
 			}
@@ -509,7 +512,10 @@ public class FbChatHelper {
 		return replies;
 	}
 
-	//In base alla direzione assegno l'ID alla funivia
+	/**
+	 * In base alla direzione assegno l'ID alla funivia
+	 * @param chatContext
+	 */
 	public void getFuniviaID(ChatContext chatContext){		
 		if(chatContext.direzione)
 			chatContext.FuniviaID = "FunA";
@@ -517,307 +523,40 @@ public class FbChatHelper {
 			chatContext.FuniviaID = "FunR";		
 	}
 	
-	//Stampa gli orari in base alla fascia scelta e in caso ritorna un messaggio di errore in caso non ci fossero risultati
-	public String timePrinter(String senderId, ChatContext chatContext, String text){
+	
+	
+	/**
+	 * Stampa gli orari in base alla fascia scelta e ritorna un messaggio di errore in caso non ci fossero risultati
+	 * @param senderId
+	 * @param mezzo
+	 * @param inizioFascia
+	 * @param fineFascia
+	 * @param text
+	 * @return
+	 */
+	public String timePrinter(String senderId, TimeTable mezzo, int inizioFascia, int fineFascia, String text){
 		String messaggio = "";
 		String subString = "";
 		
-		if(chatContext.context.equals("MENU_FUNIVIA_2")){
-			switch (chatContext.fascia){
-				case "04-06":{
-					for(int i = 0; i < chatContext.autobus.getTimes().size(); i++){
-						if(!chatContext.autobus.getTimes().get(i).get(0).isEmpty()){
-							subString = chatContext.autobus.getTimes().get(i).get(0).substring(0,2);
-							
-							if((Integer.parseInt(subString) >= 4 && Integer.parseInt(subString) < 7)){
-								messaggio = messaggio + "  " + chatContext.autobus.getTimes().get(i).get(0);
-							}
-						}
-					}
-	
-					break;
-				}
-				case "07-09":{
-					for(int i = 0; i < chatContext.autobus.getTimes().size(); i++){
-						if(!chatContext.autobus.getTimes().get(i).get(0).isEmpty()){
-							subString = chatContext.autobus.getTimes().get(i).get(0).substring(0,2);
-							
-							if((Integer.parseInt(subString) >= 7 && Integer.parseInt(subString) < 10)){
-								messaggio = messaggio + "  " + chatContext.autobus.getTimes().get(i).get(0);
-							}
-						}
-					}
-	
-					break;
-				}
-				case "10-12":{
-					for(int i = 0; i < chatContext.autobus.getTimes().size(); i++){
-						if(!chatContext.autobus.getTimes().get(i).get(0).isEmpty()){
-							subString = chatContext.autobus.getTimes().get(i).get(0).substring(0,2);
-							
-							if((Integer.parseInt(subString) >= 10 && Integer.parseInt(subString) < 13)){
-								messaggio = messaggio + "  " + chatContext.autobus.getTimes().get(i).get(0);
-							}
-						}
-					}
+		int j = findStopInList(mezzo, text);
 		
-					break;
-				}
-				case "13-15":{
-					for(int i = 0; i < chatContext.autobus.getTimes().size(); i++){
-						if(!chatContext.autobus.getTimes().get(i).get(0).isEmpty()){
-							subString = chatContext.autobus.getTimes().get(i).get(0).substring(0,2);
-							
-							if((Integer.parseInt(subString) >= 13 && Integer.parseInt(subString) < 16)){
-								messaggio = messaggio + "  " + chatContext.autobus.getTimes().get(i).get(0);
-							}
-						}
-					}
+		if(inizioFascia != 22){
+			for(int i = 0; i < mezzo.getTimes().size(); i++){
+				if(!mezzo.getTimes().get(i).get(j).isEmpty()){
+					subString = mezzo.getTimes().get(i).get(j).substring(0,2);
 					
-					break;
-				}
-				case "16-18":{
-					for(int i = 0; i < chatContext.autobus.getTimes().size(); i++){
-						if(!chatContext.autobus.getTimes().get(i).get(0).isEmpty()){
-							subString = chatContext.autobus.getTimes().get(i).get(0).substring(0,2);
-							
-							if((Integer.parseInt(subString) >= 16 && Integer.parseInt(subString) < 19)){
-								messaggio = messaggio + "  " + chatContext.autobus.getTimes().get(i).get(0);
-							}
-						}
-					}
-				
-					break;
-				}
-				case "19-21":{
-					for(int i = 0; i < chatContext.autobus.getTimes().size(); i++){
-						if(!chatContext.autobus.getTimes().get(i).get(0).isEmpty()){
-							subString = chatContext.autobus.getTimes().get(i).get(0).substring(0,2);
-							
-							if((Integer.parseInt(subString) >= 19 && Integer.parseInt(subString) < 22)){
-								messaggio = messaggio + "  " + chatContext.autobus.getTimes().get(i).get(0);
-							}
-						}
-					}
-				
-					break;
-				}
-				case "22-24":{
-					for(int i = 0; i < chatContext.autobus.getTimes().size(); i++){
-						if(!chatContext.autobus.getTimes().get(i).get(0).isEmpty()){
-							subString = chatContext.autobus.getTimes().get(i).get(0).substring(0,2);
-							
-							if((Integer.parseInt(subString) >= 22 || (Integer.parseInt(subString) >= 0 && Integer.parseInt(subString) < 1))){
-								messaggio = messaggio + "  " + chatContext.autobus.getTimes().get(i).get(0);
-							}
-						}
-					}
-				
-					break;
-				}
-				default:{
-					messaggio="Errore";
+					if(Integer.parseInt(subString) >= inizioFascia && Integer.parseInt(subString) < fineFascia)
+						messaggio += "  " + mezzo.getTimes().get(i).get(j);
 				}
 			}
 		}
 		else{
-			int j = findStopInList(chatContext, text);
-			
-			if(chatContext.context.equals("MENU_AUTOBUS_5") || chatContext.context.equals("MENU_AUTOBUS_4")){
-				switch (chatContext.fascia){
-					case "04-06":{
-						for(int i = 0; i < chatContext.autobus.getTimes().size(); i++){
-							if(!chatContext.autobus.getTimes().get(i).get(j).isEmpty()){
-								subString = chatContext.autobus.getTimes().get(i).get(j).substring(0,2);
-								
-								if((Integer.parseInt(subString) >= 4 && Integer.parseInt(subString) < 7)){
-									messaggio = messaggio + "  " + chatContext.autobus.getTimes().get(i).get(j);
-								}
-							}
-						}
-		
-						break;
-					}
-					case "07-09":{
-						for(int i = 0; i < chatContext.autobus.getTimes().size(); i++){
-							if(!chatContext.autobus.getTimes().get(i).get(j).isEmpty()){
-								subString = chatContext.autobus.getTimes().get(i).get(j).substring(0,2);
-								
-								if((Integer.parseInt(subString) >= 7 && Integer.parseInt(subString) < 10)){
-									messaggio = messaggio + "  " + chatContext.autobus.getTimes().get(i).get(j);
-								}
-							}
-						}
-		
-						break;
-					}
-					case "10-12":{
-						for(int i = 0; i < chatContext.autobus.getTimes().size(); i++){
-							if(!chatContext.autobus.getTimes().get(i).get(j).isEmpty()){
-								subString = chatContext.autobus.getTimes().get(i).get(j).substring(0,2);
-								
-								if((Integer.parseInt(subString) >= 10 && Integer.parseInt(subString) < 13)){
-									messaggio = messaggio + "  " + chatContext.autobus.getTimes().get(i).get(j);
-								}
-							}
-						}
-			
-						break;
-					}
-					case "13-15":{
-						for(int i = 0; i < chatContext.autobus.getTimes().size(); i++){
-							if(!chatContext.autobus.getTimes().get(i).get(j).isEmpty()){
-								subString = chatContext.autobus.getTimes().get(i).get(j).substring(0,2);
-								
-								if((Integer.parseInt(subString) >= 13 && Integer.parseInt(subString) < 16)){
-									messaggio = messaggio + "  " + chatContext.autobus.getTimes().get(i).get(j);
-								}
-							}
-						}
-						
-						break;
-					}
-					case "16-18":{
-						for(int i = 0; i < chatContext.autobus.getTimes().size(); i++){
-							if(!chatContext.autobus.getTimes().get(i).get(j).isEmpty()){
-								subString = chatContext.autobus.getTimes().get(i).get(j).substring(0,2);
-								
-								if((Integer.parseInt(subString) >= 16 && Integer.parseInt(subString) < 19)){
-									messaggio = messaggio + "  " + chatContext.autobus.getTimes().get(i).get(j);
-								}
-							}
-						}
+			for(int i = 0; i < mezzo.getTimes().size(); i++){
+				if(!mezzo.getTimes().get(i).get(j).isEmpty()){
+					subString = mezzo.getTimes().get(i).get(j).substring(0,2);
 					
-						break;
-					}
-					case "19-21":{
-						for(int i = 0; i < chatContext.autobus.getTimes().size(); i++){
-							if(!chatContext.autobus.getTimes().get(i).get(j).isEmpty()){
-								subString = chatContext.autobus.getTimes().get(i).get(j).substring(0,2);
-								
-								if((Integer.parseInt(subString) >= 19 && Integer.parseInt(subString) < 22)){
-									messaggio = messaggio + "  " + chatContext.autobus.getTimes().get(i).get(j);
-								}
-							}
-						}
-					
-						break;
-					}
-					case "22-24":{
-						for(int i = 0; i < chatContext.autobus.getTimes().size(); i++){
-							if(!chatContext.autobus.getTimes().get(i).get(j).isEmpty()){
-								subString = chatContext.autobus.getTimes().get(i).get(j).substring(0,2);
-								
-								if((Integer.parseInt(subString) >= 22 || (Integer.parseInt(subString) >= 0 && Integer.parseInt(subString) < 1))){
-									messaggio = messaggio + "  " + chatContext.autobus.getTimes().get(i).get(j);
-								}
-							}
-						}
-					
-						break;
-					}
-					default:{
-						messaggio="Errore";
-					}
-				}
-			}
-			else if(chatContext.context.equals("MENU_TRENI_5")){
-				switch (chatContext.fascia){
-				
-					case "04-06":{
-						for(int i = 0; i < chatContext.treni.getTimes().size(); i++){
-							if(!chatContext.treni.getTimes().get(i).get(j).isEmpty()){
-								subString = chatContext.treni.getTimes().get(i).get(j).substring(0,2);
-								
-								if((Integer.parseInt(subString) >= 4 && Integer.parseInt(subString) < 7)){
-									messaggio = messaggio + "  " + chatContext.treni.getTimes().get(i).get(j);
-								}
-							}
-						}
-		
-						break;
-					}
-					case "07-09":{
-						for(int i = 0; i < chatContext.treni.getTimes().size(); i++){
-							if(!chatContext.treni.getTimes().get(i).get(j).isEmpty()){
-								subString = chatContext.treni.getTimes().get(i).get(j).substring(0,2);
-								
-								if((Integer.parseInt(subString) >= 7 && Integer.parseInt(subString) < 10)){
-									messaggio = messaggio + "  " + chatContext.treni.getTimes().get(i).get(j);
-								}
-							}
-						}
-		
-						break;
-					}
-					case "10-12":{
-						for(int i = 0; i < chatContext.treni.getTimes().size(); i++){
-							if(!chatContext.treni.getTimes().get(i).get(j).isEmpty()){
-								subString = chatContext.treni.getTimes().get(i).get(j).substring(0,2);
-								
-								if((Integer.parseInt(subString) >= 10 && Integer.parseInt(subString) < 13)){
-									messaggio = messaggio + "  " + chatContext.treni.getTimes().get(i).get(j);
-								}
-							}
-						}
-			
-						break;
-					}
-					case "13-15":{
-						for(int i = 0; i < chatContext.treni.getTimes().size(); i++){
-							if(!chatContext.treni.getTimes().get(i).get(j).isEmpty()){
-								subString = chatContext.treni.getTimes().get(i).get(j).substring(0,2);
-								
-								if((Integer.parseInt(subString) >= 13 && Integer.parseInt(subString) < 16)){
-									messaggio = messaggio + "  " + chatContext.treni.getTimes().get(i).get(j);
-								}
-							}
-						}
-						
-						break;
-					}
-					case "16-18":{
-						for(int i = 0; i < chatContext.treni.getTimes().size(); i++){
-							if(!chatContext.treni.getTimes().get(i).get(j).isEmpty()){
-								subString = chatContext.treni.getTimes().get(i).get(j).substring(0,2);
-								
-								if((Integer.parseInt(subString) >= 16 && Integer.parseInt(subString) < 19)){
-									messaggio = messaggio + "  " + chatContext.treni.getTimes().get(i).get(j);
-								}
-							}
-						}
-					
-						break;
-					}
-					case "19-21":{
-						for(int i = 0; i < chatContext.treni.getTimes().size(); i++){
-							if(!chatContext.treni.getTimes().get(i).get(j).isEmpty()){
-								subString = chatContext.treni.getTimes().get(i).get(j).substring(0,2);
-								
-								if((Integer.parseInt(subString) >= 19 && Integer.parseInt(subString) < 22)){
-									messaggio = messaggio + "  " + chatContext.treni.getTimes().get(i).get(j);
-								}
-							}
-						}
-					
-						break;
-					}
-					case "22-24":{
-						for(int i = 0; i < chatContext.treni.getTimes().size(); i++){
-							if(!chatContext.treni.getTimes().get(i).get(j).isEmpty()){
-								subString = chatContext.treni.getTimes().get(i).get(j).substring(0,2);
-								
-								if((Integer.parseInt(subString) >= 22 || (Integer.parseInt(subString) >= 0 && Integer.parseInt(subString) < 1))){
-									messaggio = messaggio + "  " + chatContext.treni.getTimes().get(i).get(j);
-								}
-							}
-						}
-					
-						break;
-					}
-					default:{
-						messaggio="Errore";
-					}
+					if((Integer.parseInt(subString) >= 22 || (Integer.parseInt(subString) >= 0 && Integer.parseInt(subString) < 1)))
+						messaggio += "  " + mezzo.getTimes().get(i).get(j);
 				}
 			}
 		}
@@ -828,7 +567,11 @@ public class FbChatHelper {
 		return messaggio;
 	}
 	
-	//Cerco tutte le fermate che contengono il testo inserito dall'utente
+	/**
+	 * Cerco tutte le fermate che contengono il testo inserito dall'utente
+	 * @param chatcontext
+	 * @return
+	 */
 	private List<String> stopsSearcher(ChatContext chatcontext){
 		List<String> stops = new ArrayList<>();
 
@@ -847,7 +590,13 @@ public class FbChatHelper {
 		return stops;
 	}
 	
-	//Ritorna gli orari della funivia
+	/**
+	 * Ritorna gli orari della funivia
+	 * @param senderId
+	 * @param chatContext
+	 * @param text
+	 * @return
+	 */
 	private String getOrariFunivia(String senderId, ChatContext chatContext, String text){
 		String msg = "Questa funivia non esiste";
 		
@@ -857,12 +606,18 @@ public class FbChatHelper {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		msg = timePrinter(senderId, chatContext, text);
+		msg = timePrinter(senderId, chatContext.autobus, Integer.parseInt(chatContext.fascia.substring(0, 2)), Integer.parseInt(chatContext.fascia.substring(3, 5)), text);
 		
 		return msg;
 	}
 	
-	//Ritorna gli orari dell'autobus
+	/**
+	 * Ritorna gli orari dell'autobus
+	 * @param senderId
+	 * @param chatContext
+	 * @param text
+	 * @return
+	 */
 	private String getOrariAutobus(String senderId, ChatContext chatContext, String text){
 		String msg = "Questo autobus non esiste (in caso di autobus  \"/\" digitare solo il bus di riferimento)";
 		
@@ -873,12 +628,18 @@ public class FbChatHelper {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		msg = timePrinter(senderId, chatContext, text);
+		msg = timePrinter(senderId, chatContext.autobus, Integer.parseInt(chatContext.fascia.substring(0, 2)), Integer.parseInt(chatContext.fascia.substring(3, 5)), text);
 		
 		return msg;
 	}
 	
-	//Ritorna gli orari del treno
+	/**
+	 * Ritorna gli orari del treno
+	 * @param senderId
+	 * @param chatContext
+	 * @param text
+	 * @return
+	 */
 	private String getOrariTreni(String senderId, ChatContext chatContext, String text){
 		String msg = "Questo treno non esiste";
 		
@@ -888,34 +649,36 @@ public class FbChatHelper {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		msg = timePrinter(senderId, chatContext, text);
+		msg = timePrinter(senderId, chatContext.treni, Integer.parseInt(chatContext.fascia.substring(0, 2)), Integer.parseInt(chatContext.fascia.substring(3, 5)), text);
 		
 		return msg;
 	}
 	
-	//Tramite il nome della fermata restituisco l'indice della sua posizione all'interno della lista delle fermate
-	private int findStopInList(ChatContext chatContext, String text){
+	/**
+	 * Tramite il nome della fermata restituisco l'indice della sua posizione all'interno della lista delle fermate
+	 * @param mezzo
+	 * @param text
+	 * @return
+	 */
+	private int findStopInList(TimeTable mezzo, String text){
 		boolean find = false;
 		int i = 0;
 		
-		if(chatContext.context.equals("MENU_AUTOBUS_5")||chatContext.context.equals("MENU_AUTOBUS_4")){
-			for(; i < chatContext.autobus.getStops().size() && !find; i++){
-				if(chatContext.autobus.getStops().get(i).contains(text)){
-					find = true;
-				}
+		for(; i < mezzo.getStops().size() && !find; i++){
+			if(mezzo.getStops().get(i).contains(text)){
+				find = true;
 			}
 		}
-		else{
-			for(; i < chatContext.treni.getStops().size() && !find; i++){
-				if(chatContext.treni.getStops().get(i).contains(text)){
-					find = true;
-				}
-			}
-		}	
+	
 		return i - 1;
 	}
 	
-	//Ritorna una stringa che permette di formare il messaggio Json
+	/**
+	 * Ritorna una stringa che permette di formare il messaggio Json
+	 * @param senderId
+	 * @param msg
+	 * @return
+	 */
 	private String makeMessage(String senderId, String msg){
 		Message fbMsg = getMsg(msg);
 		String fbReply = getJsonReply(senderId, fbMsg);
@@ -923,7 +686,12 @@ public class FbChatHelper {
 		return fbReply;
 	}
 	
-	//Ritorna una stringa che permette di formare il messaggio Json
+	/**
+	 * Ritorna una stringa che permette di formare il messaggio Json
+	 * @param senderId
+	 * @param cards
+	 * @return
+	 */
 	private String makeCards(String senderId, Message cards){
 		Message fbMsg = cards;
 		String fbReply = getJsonReply(senderId, fbMsg);
@@ -931,7 +699,12 @@ public class FbChatHelper {
 		return fbReply;
 	}
 	
-	//Ritorna una stringa che permette di formare il messaggio Json
+	/**
+	 * Ritorna una stringa che permette di formare il messaggio Json
+	 * @param senderId
+	 * @param quick
+	 * @return
+	 */
 	private String makeQuick(String senderId, Message quick){
 		Message fbMsg = quick;
 		String fbReply = getJsonReply(senderId, fbMsg);
@@ -939,14 +712,22 @@ public class FbChatHelper {
 		return fbReply;
 	}
 	
-	//Ritorna un messaggio partendo da una stringa
+	/**
+	 * Ritorna un messaggio partendo da una stringa
+	 * @param msg
+	 * @return
+	 */
 	private Message getMsg(String msg) {
 		Message message = new Message();
 		message.setText(msg);
 		return message;
 	}
 	
-	//Aggiunge al Messaggio un attachment contenente il payload
+	/**
+	 * Aggiunge al Messaggio un attachment contenente il payload
+	 * @param payload
+	 * @return
+	 */
 	private Message getQuestion(Payload payload) {
 		Attachment attachment = new Attachment();
 		attachment.setPayload(payload);
@@ -977,7 +758,12 @@ public class FbChatHelper {
 		return jsonReply;
 	}
 	
-	//Restituisce un messaggio contenente delle quickReplies
+	/**
+	 * Restituisce un messaggio contenente delle quickReplies
+	 * @param i
+	 * @param chatContext
+	 * @return
+	 */
 	private Message getQuickMessage(int i, ChatContext chatContext) {
 		List<QuickReply> quickReplies = getQuick(chatContext);
 		Message message = messaggiQuick.get(i);
@@ -986,7 +772,11 @@ public class FbChatHelper {
 		return message;
 	}
 	
-	//Restituisce una lista di quickReplies oraganizzate in una lista
+	/**
+	 * Restituisce una lista di quickReplies oraganizzate in una lista
+	 * @param chatContext
+	 * @return
+	 */
 	private List<QuickReply> getQuick(ChatContext chatContext) {	
  		List<QuickReply> quickReplies =  new ArrayList<>();
  		
@@ -999,7 +789,11 @@ public class FbChatHelper {
 		return quickRepliesOption;		
 	}
 	
-	//Retorna una lista di quickReplies in base al contesto
+	/**
+	 * Retorna una lista di quickReplies in base al contesto
+	 * @param chatContext
+	 * @return
+	 */
 	private List<QuickReply> getQuickReplies(ChatContext chatContext){
 		List<QuickReply> quick = new ArrayList<>();
 		
@@ -1149,14 +943,22 @@ public class FbChatHelper {
 		return quick;	
 	}
 
-	//ritorna le prime 20 lettere di una stringa
+	/**
+	 * Ritorna le prime 20 lettere di una stringa
+	 * @param title
+	 * @return
+	 */
 	private String stringCut(String title){
 		title = title.substring(0, 20);
 		
 		return title;
 	}
 	
-	//Ritorna un messaggio con quickReplies specifiche
+	/**
+	 * Ritorna un messaggio con quickReplies specifiche
+	 * @param chatContext
+	 * @return
+	 */
 	private Message getTaxi(ChatContext chatContext) {
 		List<Element> elements = getElementsTaxi(chatContext);
 		
@@ -1168,7 +970,11 @@ public class FbChatHelper {
 		return getQuestion(payload);
 	}
 	
-	//Ritorna un messaggio con quickReplies specifiche
+	/**
+	 * Ritorna un messaggio con quickReplies specifiche
+	 * @param chatContext
+	 * @return
+	 */
 	private Message getTreni(ChatContext chatContext) {
 		List<QuickReply> quickReplies = getQuick(chatContext);
 		Message message = messaggiQuickTreni.get(0);
@@ -1177,7 +983,11 @@ public class FbChatHelper {
 		return message;
 	}
 	
-	//Ritorna un messaggio con quickReplies specifiche
+	/**
+	 * Ritorna un messaggio con quickReplies specifiche
+	 * @param chatContext
+	 * @return
+	 */
 	private Message getParcheggi(ChatContext chatContext) {
 		List<Element> elements = getElementsParcheggi(chatContext);
 		Payload payload = new Payload();
@@ -1187,7 +997,11 @@ public class FbChatHelper {
 		return getQuestion(payload);
 	}
 	
-	//Ritorna un messaggio con quickReplies specifiche
+	/**
+	 * Ritorna un messaggio con quickReplies specifiche
+	 * @param chatContext
+	 * @return
+	 */
 	private Message getParcheggiBici(ChatContext chatContext) {
 		List<Element> elements = getElementsParcheggiBici(chatContext);
 		Payload payload = new Payload();
@@ -1197,7 +1011,11 @@ public class FbChatHelper {
 		return getQuestion(payload);
 	}
 	
-	//Ritorna una lista di schede
+	/**
+	 * Ritorna una lista di schede
+	 * @param chatContext
+	 * @return
+	 */
 	private List<Element> getElementsTaxi(ChatContext chatContext) {
 		List<Element> elements = new ArrayList<>();
 		
@@ -1215,7 +1033,11 @@ public class FbChatHelper {
 			return elements;
 	}
 	
-	//Ritorna una lista di schede
+	/**
+	 * Ritorna una lista di schede
+	 * @param chatContext
+	 * @return
+	 */
 	private List<Element> getElementsParcheggi(ChatContext chatContext) {
 			List<Element> elements = new ArrayList<>();	
 			TitleSubTitle Parcheggi = optionparcheggi.get(chatContext.index);
@@ -1229,7 +1051,11 @@ public class FbChatHelper {
 		return elements;
 	}
 	
-	//Ritorna una lista di schede
+	/**
+	 * Ritorna una lista di schede
+	 * @param chatContext
+	 * @return
+	 */
 	private List<Element> getElementsParcheggiBici(ChatContext chatContext) {
 			List<Element> elements = new ArrayList<>();	
 			TitleSubTitle Parcheggibici = optionparcheggibici.get(chatContext.index);
@@ -1243,7 +1069,12 @@ public class FbChatHelper {
 			return elements;
 	}
 	
-	////Ritorna un messaggio contenente delle schede con bottoni
+	/**
+	 * Ritorna un messaggio contenente delle schede con bottoni
+	 * @param i
+	 * @param chatContext
+	 * @return
+	 */
 	private Message getCardsMenu(int i, ChatContext chatContext) {
 		List<Element> elements = getElementsMenu(i, chatContext);
 		Payload payload = new Payload();
@@ -1253,7 +1084,12 @@ public class FbChatHelper {
 		return getQuestion(payload);
 	}
 
-	//Aggiunge i bottoni ad una determinata scheeda
+	/**
+	 * Aggiunge i bottoni ad una determinata scheeda
+	 * @param i
+	 * @param chatContext
+	 * @return
+	 */
 	private List<Element> getElementsMenu(int i, ChatContext chatContext) {
 		List<Element> elements = new ArrayList<>();
 
@@ -1270,7 +1106,11 @@ public class FbChatHelper {
 		return elements;
 	}
 	
-	//Ritorna dei bottoni in base al contesto
+	/**
+	 * Ritorna dei bottoni in base al contesto
+	 * @param chatContext
+	 * @return
+	 */
 	private List<Button> getButtons(ChatContext chatContext) {
 		List<Button> buttons = new ArrayList<>();
 

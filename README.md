@@ -1,14 +1,22 @@
-# Java-FbChatBot         [![Build Status](https://api.travis-ci.org/thekosmix/Java-FbChatBot.png)](http://travis-ci.org/thekosmix/Java-FbChatBot)
-This is an implementation of Fb chat bot in java. It shows how to create Fb messenger webhook in java, contracts and PoJos of webhook. This project can be used to setup fb messenger webhook with existing tomcat/jetty/java project.
 
-## How to setup
- - read [HOWTO.md] (HOWTO.md)
+### *Setup the Facebook App*
 
-##Screenshots
-Normal text by a user
+1. Create or configure a Facebook App or Page here https://developers.facebook.com/apps/
 
-  ![Normal text](screenshots/msg_text.png)
-  
-Postbacks (button click by a user in messenger)
+    ![Alt text](/demo/shot1.jpg)
 
-  ![PostBacks](screenshots/msg_postback.png)
+2. In the app go to Messenger tab then click Setup Webhook. Here you will put in the URL of your server and a token. Make sure to check all the subscription fields. 
+
+    ![Alt text](/demo/shot3.jpg)
+
+3. Get a Page Access Token and save this somewhere. 
+
+    ![Alt text](/demo/shot2.jpg)
+
+4. Go back to your project then put the Page Access Token in the field PAGE_TOKEN and u can find it in the class WebHookServlet
+
+5. Go to the Facebook Page and click on Message to start chatting!
+
+![Alt text](/demo/shot4.jpg)
+
+
