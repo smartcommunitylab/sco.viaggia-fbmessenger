@@ -13,7 +13,7 @@
 
     ![Alt text](/demo/shot2.jpg)
 
-4. Go back to your project then put the Page Access Token in the field PAGE_TOKEN and u can find it in the class WebHookServlet
+4. Go back to your project then put the Page Access Token in the field PAGE_TOKEN and you can find it in the class WebHookServlet
 
 5. Go to the Facebook Page and click on Message to start chatting!
 
