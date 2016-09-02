@@ -143,6 +143,15 @@ public class WebHookServlet extends HttpServlet {
 	 */
 	
 	public void sendTextMessage(final String senderId, final String text, final boolean isPostBack) {
+		/*new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e1) {
+					e1.printStackTrace();
+				}*/
 				List<String> jsonReplies = null;
 				
 				if (isPostBack) {
@@ -169,6 +178,8 @@ public class WebHookServlet extends HttpServlet {
 						e.printStackTrace();
 					}
 				}
+			/*}
+		}).start();*/
 	}
 	
 	@Override

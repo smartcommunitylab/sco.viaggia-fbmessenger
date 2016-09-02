@@ -8,14 +8,21 @@ import it.sayservice.platform.smartplanner.data.message.otpbeans.Parking;
 
 import com.mongodb.DB;
 import com.mongodb.DBCollection;
+import com.google.common.collect.Lists;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.codehaus.jackson.map.ObjectMapper;
 import in.strollup.fb.contract.ChatContext;
 
+/**
+ * 
+ * @author dlico
+ *
+ */
 public class MongoDBJDBC {
 	 private MongoClient mongoClient;
 	 private DB db;
@@ -55,13 +62,11 @@ private DBObject convertToDBObject(ChatContext context) {
 	   obj.put("funiviaID", context.getFuniviaID());
 	   obj.put("text", context.getText());
 	   obj.put("index", context.getIndex());
-	   obj.put("taxi", context.getTaxi());
-	   
+	   obj.put("taxi", setListTCToDBObject(context.getTaxi()));
 	   obj.put("autobus", setTimeTableToDBObject(context.getAutobus()));
 	   obj.put("treni", setTimeTableToDBObject(context.getTreni()));
-	   
-	   obj.put("parcheggi", context.getParcheggi());
-	   obj.put("parcheggiBici", context.getParcheggiBici());
+	   obj.put("parcheggi", setListPDBObject(context.getParcheggi()));
+	   obj.put("parcheggiBici", setListPDBObject(context.getParcheggiBici()));
 	   obj.put("fascia", context.getFascia());
 	return obj;
 }
@@ -89,11 +94,11 @@ private DBObject convertToDBObject(ChatContext context) {
 		   chatcontexts.setFuniviaID((String) contextDBObject.get("funiviaID"));
 		   chatcontexts.setText((String) contextDBObject.get("text"));
 		   chatcontexts.setIndex((int) contextDBObject.get("index"));
-		   chatcontexts.setTaxi((List<TaxiContact>) contextDBObject.get("taxi"));
+		   chatcontexts.setTaxi(setDBObjectToListTCT(contextDBObject.get("taxi")));
 		   chatcontexts.setAutobus(setDBObjectToTimetable(contextDBObject.get("autobus")));
 		   chatcontexts.setTreni(setDBObjectToTimetable(contextDBObject.get("treni")));
-		   chatcontexts.setParcheggi((List<Parking>) contextDBObject.get("parcheggi"));
-		   chatcontexts.setParcheggiBici((List<Parking>) contextDBObject.get("parcheggiBici"));
+		   chatcontexts.setParcheggi(setDBObjectToListP(contextDBObject.get("parcheggi")));
+		   chatcontexts.setParcheggiBici(setDBObjectToListP(contextDBObject.get("parcheggiBici")));
 		   chatcontexts.setFascia((String) contextDBObject.get("fascia"));
 		   }
 	   else
@@ -108,10 +113,52 @@ private DBObject convertToDBObject(ChatContext context) {
 	   return DBOBJTimeTable;
    }
    
+   private List<DBObject> setListTCToDBObject(List<TaxiContact> taxi){
+	   ObjectMapper mapper = new ObjectMapper();
+	   List<DBObject> result = Lists.newArrayList();
+	   for(TaxiContact t : taxi){
+		   DBObject DBOBJTaxiContact = mapper.convertValue(t, BasicDBObject.class);
+		   result.add(DBOBJTaxiContact);
+	   }
+	   
+	   return result;
+   }
+   
+   private List<DBObject> setListPDBObject(List<Parking> parcheggi){
+	   ObjectMapper mapper = new ObjectMapper();
+	   List<DBObject> result = Lists.newArrayList();
+	   for(Parking p : parcheggi){
+		   DBObject DBOBJTaxiContact = mapper.convertValue(p, BasicDBObject.class);
+		   result.add(DBOBJTaxiContact);
+	   }
+	   
+	   return result;
+   }
+   
    private TimeTable setDBObjectToTimetable(java.lang.Object object){
 	   ObjectMapper mapper = new ObjectMapper();
 	   TimeTable  DBOBJTimeTable = mapper.convertValue(object, TimeTable.class);
 	   
 	   return DBOBJTimeTable;
+   }
+   
+   private List<TaxiContact> setDBObjectToListTCT(java.lang.Object object){
+	   ObjectMapper mapper = new ObjectMapper();
+	   List<TaxiContact>  DBOBJTaxiContact = new ArrayList<>();
+		
+	   for(int i = 0; i < DBOBJTaxiContact.size(); i++)
+		   DBOBJTaxiContact.add(mapper.convertValue(object, TaxiContact.class));
+	   
+	   return DBOBJTaxiContact;
+   }
+   
+   private List<Parking> setDBObjectToListP(java.lang.Object object){
+	   ObjectMapper mapper = new ObjectMapper();
+	   List<Parking>  DBOBJTaxiContact = new ArrayList<>();
+		
+	   for(int i = 0; i < DBOBJTaxiContact.size(); i++)
+		   DBOBJTaxiContact.add(mapper.convertValue(object, Parking.class));
+	   
+	   return DBOBJTaxiContact;
    }
 }

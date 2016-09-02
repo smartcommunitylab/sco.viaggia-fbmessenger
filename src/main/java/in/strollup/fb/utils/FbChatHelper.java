@@ -176,7 +176,7 @@ public class FbChatHelper {
 		//se viene selezionato il pulsante di avvio stampa un messagio di benvenuto
 		if(text.equals("START")){
 			chatContext.setContext("generale");
-			postbackReplies.add(makeMessage(senderId, "Benvenuto al bot di ViaggiaTrento, usa il menù laterale per accedere a tutte le funzioni"));
+			postbackReplies.add(makeMessage(senderId, "Benvenuto al bot di ViaggiaTrento, usa il menù in basso a sinistra per accedere alle funzioni"));
 		}
 		
 		//se il text equivale ad una delle voci del menù allora setto il contesto uguale a text, inizializzo i parametri nescessari al contesto selezionato e in caso il contesto fosse MENU_AUTOBUS_1 stampo una scheda specifica
@@ -523,7 +523,7 @@ public class FbChatHelper {
 	 * @return
 	 */
 	public String timePrinter(String senderId, TimeTable mezzo, int inizioFascia, int fineFascia, String text){
-		String messaggio = "";
+		String messaggio = "Di seguito gli orari richiesti: ";
 		String subString = "";
 		
 		int j = findStopInList(mezzo, text);
@@ -534,7 +534,7 @@ public class FbChatHelper {
 					subString = mezzo.getTimes().get(i).get(j).substring(0,2);
 					
 					if(Integer.parseInt(subString) >= inizioFascia && Integer.parseInt(subString) < fineFascia)
-						messaggio += "  " + mezzo.getTimes().get(i).get(j);
+						messaggio += mezzo.getTimes().get(i).get(j) + "  ";
 				}
 			}
 		}
@@ -544,12 +544,12 @@ public class FbChatHelper {
 					subString = mezzo.getTimes().get(i).get(j).substring(0,2);
 					
 					if((Integer.parseInt(subString) >= 22 || (Integer.parseInt(subString) >= 0 && Integer.parseInt(subString) < 1)))
-						messaggio += "  " + mezzo.getTimes().get(i).get(j);
+						messaggio += mezzo.getTimes().get(i).get(j) + "  ";
 				}
 			}
 		}
 		
-		if(messaggio.equals(""))
+		if(messaggio.equals("Di seguito gli orari richiesti: "))
 			messaggio = "Non ci sono autobus disponibili";
 		
 		return messaggio;

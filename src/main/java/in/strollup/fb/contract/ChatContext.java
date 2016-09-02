@@ -14,7 +14,6 @@ import it.sayservice.platform.smartplanner.data.message.otpbeans.Parking;
  * @author dlico
  *
  */
-
 //classe che permette di avere parametri legati al singolo utente
 public class ChatContext {
 	
