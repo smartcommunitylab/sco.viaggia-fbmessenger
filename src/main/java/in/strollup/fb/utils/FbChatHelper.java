@@ -5,9 +5,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.commons.lang3.StringUtils;
@@ -20,7 +18,7 @@ import it.sayservice.platform.smartplanner.data.message.otpbeans.Parking;
 
 import in.strollup.fb.contract.Attachment;
 import in.strollup.fb.contract.Button;
-import in.strollup.fb.contract.Database;
+import in.strollup.fb.contract.ServerData;
 import in.strollup.fb.contract.Element;
 import in.strollup.fb.contract.Message;
 import in.strollup.fb.contract.Messaging;
@@ -28,51 +26,29 @@ import in.strollup.fb.contract.Payload;
 import in.strollup.fb.contract.QuickReply;
 import in.strollup.fb.contract.Recipient;
 import in.strollup.fb.servlet.WebHookServlet;
-
-// web_url postback
+import in.strollup.fb.contract.MongoDBJDBC;
+import in.strollup.fb.contract.ChatContext;
 
 /**
- * A Utility class which replies to fb messgaes (or postbacks).<br/>
- * If you already have a service which takes string as input and gives some
- * output, you can easily embed that service in this utility to make your own AI
- * bot.<br/>
+ * A Utility class which replies to fb messgaes (or postbacks).
  * 
- * A Service can be a search engine for music or a help desk of a company.
- * 
- * @author siddharth
+ * @author dlico & Ayoub50
  *
  */
 public class FbChatHelper {
 	private static List<TitleSubTitle> option;
 	private static List<Message> messaggiQuick;
-	private static List<String> busMonodirezionali;
-	private static List<String> menuVoice;
+	private static List<String> menuVoice, busMonodirezionali;
+	MongoDBJDBC mongoDBJDBC;
 	
 	private static List<TitleSubTitle> optiontaxi,optionparcheggi,optionparcheggibici;
 	private static List<Message> messaggiQuickTreni;
-	
-	//classe che permette di avere parametri legati al singolo utente
-	private static class ChatContext {
-		private String context = "start";
-		private boolean direzione = true;
-		private String busID;
-		private String trainID;
-		private String FuniviaID;
-		private String text;
-		private int index = 0;
-		private TimeTable autobus = new TimeTable();
-		private List<TaxiContact> taxi = new ArrayList<TaxiContact>();
-		private TimeTable treni = new TimeTable();
-		private List<Parking> parcheggi = new ArrayList<Parking>();
-		private List<Parking> parcheggiBici = new ArrayList<Parking>();
-		private String fascia;
-	}
-
-	private static Map<String, ChatContext> chatContexts = new HashMap<String, FbChatHelper.ChatContext>();
 
 	private static String profileLink = "https://graph.facebook.com/v2.6/SENDER_ID?access_token=" + WebHookServlet.PAGE_TOKEN;
 	
-	public FbChatHelper() {
+	public FbChatHelper(MongoDBJDBC mongoDBJDBC) {
+		this.mongoDBJDBC = mongoDBJDBC;
+		
 		option = new ArrayList<>();
 		messaggiQuick = new ArrayList<>();
 		busMonodirezionali = new ArrayList<>();
@@ -151,13 +127,12 @@ public class FbChatHelper {
 			TitleSubTitle PARCHEGGI = new TitleSubTitle();
 			PARCHEGGI.setTitle(parcheggi.get(i).getName()+": "+	parcheggi.get(i).getDescription());
 			
-			if(parcheggi.get(i).getSlotsAvailable()==-2){
+			if(parcheggi.get(i).getSlotsAvailable()==-2)
 				PARCHEGGI.setSubTitle("posti totali: " +	parcheggi.get(i).getSlotsTotal());
-			}
-			else{
+			else
 				PARCHEGGI.setSubTitle("posti diponibili: " + parcheggi.get(i).getSlotsAvailable() + "    posti totali: " + parcheggi.get(i).getSlotsTotal());
-			}
-				optionparcheggi.add(PARCHEGGI);
+			
+			optionparcheggi.add(PARCHEGGI);
 		}
 	}
 	
@@ -181,7 +156,7 @@ public class FbChatHelper {
 		for(int i = 0; i < parcheggiBici.size(); i++){
 			TitleSubTitle PARCHEGGI =new TitleSubTitle();
 			PARCHEGGI.setTitle(parcheggiBici.get(i).getName() + ": " + parcheggiBici.get(i).getDescription());
-			PARCHEGGI.setSubTitle("biciclette: " + parcheggiBici.get(i).getSlotsAvailable() + "    posti liberi: " + parcheggiBici.get(i).getSlotsTotal());
+			PARCHEGGI.setSubTitle("Biciclette: " + parcheggiBici.get(i).getSlotsAvailable() + "    posti liberi: " + parcheggiBici.get(i).getSlotsTotal());
 			optionparcheggibici.add(PARCHEGGI);
 		}
 	}
@@ -200,60 +175,61 @@ public class FbChatHelper {
 		
 		//se viene selezionato il pulsante di avvio stampa un messagio di benvenuto
 		if(text.equals("START")){
-			chatContext.context = "generale";
+			chatContext.setContext("generale");
 			postbackReplies.add(makeMessage(senderId, "Benvenuto al bot di ViaggiaTrento, usa il menù laterale per accedere a tutte le funzioni"));
 		}
 		
 		//se il text equivale ad una delle voci del menù allora setto il contesto uguale a text, inizializzo i parametri nescessari al contesto selezionato e in caso il contesto fosse MENU_AUTOBUS_1 stampo una scheda specifica
 		if(menuVoice.contains(text)){
-			chatContext.context = text;
+			chatContext.setContext(text);
 			menuChoise(chatContext, text);
 			
-			if(chatContext.context.equals("MENU_AUTOBUS_1"))
+			if(chatContext.getContext().equals("MENU_AUTOBUS_1"))
 				postbackReplies.add(makeCards(senderId, getCardsMenu(0, chatContext)));	
 		}
 		
 		//stampa delle quikreplies che chiedono di scegliere la direzione
 		if(text.equals("MENU_FUNIVIA")){
-			chatContext.context = "MENU_FUNIVIA";
+			chatContext.setContext("MENU_FUNIVIA");
 			postbackReplies.add(makeQuick(senderId, getQuickMessage(3, chatContext)));
-			chatContext.context = "MENU_FUNIVIA_1";
+			chatContext.setContext("MENU_FUNIVIA_1");
 		}
 		
 		//Chiede di scegliere un bus
-		if(text.equals("MENU_AUTOBUS_1")){
-			chatContext.context = "MENU_AUTOBUS_1";	
+		if(text.equals("MENU_AUTOBUS_1")){	
 			postbackReplies.add(makeMessage(senderId, "Scegli il bus di cui vuoi sapere gli orari: (1-17)"));
 		}
 		
 		//stampa le card relative ai taxi disponibili
-		if(chatContext.context.equals("MENU_TAXI_1")){
+		if(chatContext.getContext().equals("MENU_TAXI_1")){
 			postbackReplies.add(makeCards(senderId, getTaxi(chatContext)));
 			
 			postbackReplies.add(makeMessage(senderId, "Seleziona una voce del menù per scegliere che servizio utilizzare"));
 		}
 		
 		//stampa le card relative ai parcheggi disponibili
-		if(chatContext.context.equals("MENU_PARCHEGGI_1")){
-			for(; chatContext.index < chatContext.parcheggi.size(); chatContext.index++)
+		if(chatContext.getContext().equals("MENU_PARCHEGGI_1")){
+			for(; chatContext.getIndex() < chatContext.getParcheggi().size(); chatContext.setIndex(chatContext.getIndex()+1))
 				postbackReplies.add(makeCards(senderId, getParcheggi(chatContext)));
 			
 			postbackReplies.add(makeMessage(senderId, "Seleziona una voce del menù per scegliere che servizio utilizzare"));
 		}
 		
 		//stampa le card relative ai parcheggi delle bici condivise disponibili
-		if(chatContext.context.equals("MENU_BICI_1")){
-			for(; chatContext.index < chatContext.parcheggiBici.size(); chatContext.index++)
+		if(chatContext.getContext().equals("MENU_BICI_1")){
+			for(; chatContext.getIndex() < chatContext.getParcheggiBici().size(); chatContext.setIndex(chatContext.getIndex()+1))
 				postbackReplies.add(makeCards(senderId, getParcheggiBici(chatContext)));
 			
 			postbackReplies.add(makeMessage(senderId, "Seleziona una voce del menù per scegliere che servizio utilizzare"));
 		}
 		
 		//stampa delle quikreplies che chiedono di scegliere la linea e la direzione
-		if(chatContext.context.equals("MENU_TRENI_1")){
+		if(chatContext.getContext().equals("MENU_TRENI_1")){
 			postbackReplies.add(makeQuick(senderId, getTreni(chatContext)));
-			chatContext.context = "MENU_TRENI_2";
+			chatContext.setContext("MENU_TRENI_2");
 		}
+		
+		updateChatContext(chatContext);
 		
 		return postbackReplies;
 	}
@@ -264,44 +240,52 @@ public class FbChatHelper {
 	public void trainId(String senderId, String text, ChatContext chatContext){
 		switch(text){
 			case "Bolzano - Verona":{
-				chatContext.trainID = "BV_R1_G";
+				chatContext.setTrainID("BV_R1_G");
 				break;
 			}
 			case "Verona - Bolzano":{
-				chatContext.trainID = "BV_R1_R";
+				chatContext.setTrainID("BV_R1_R");
 				break;
 			}
 			case "Trento - Bassano.d.G":{
-				chatContext.trainID = "TB_R2_G";
+				chatContext.setTrainID("TB_R2_G");
 				break;
 			}
 			case "Bassano.d.G - Trento":{
-				chatContext.trainID = "TB_R2_R";
+				chatContext.setTrainID("TB_R2_R");
 				break;
 			}
 			case "Trento - Malè":{
-				chatContext.trainID = "555";
+				chatContext.setTrainID("555");
 				break;
 			}
 			case "Malè - Trento":{
-				chatContext.trainID = "556";
+				chatContext.setTrainID("556");
 				break;
 			}
 			default:{
-				chatContext.trainID = "ERROR";
+				chatContext.setTrainID("ERROR");
 			}
 		}
 	}
 	
 	private ChatContext getChatContext(String senderId) {
-		ChatContext chatContext = chatContexts.get(senderId);
+		ChatContext chatContext = mongoDBJDBC.getUserContext(senderId);
 		if (chatContext == null) {
-			chatContext = new ChatContext();
-			chatContexts.put(senderId, chatContext);
+			ChatContext context = new ChatContext();
+			context.setUserId(senderId);
+			chatContext = mongoDBJDBC.createContext(context);
 		}
+		
 		return chatContext;
 	}
 
+	private void updateChatContext(ChatContext context) {
+		mongoDBJDBC.replace(context);
+	}
+
+
+	
 	/**
 	 * Inizializza il contesto selezionato dall'utente
 	 * @param chatContext
@@ -311,56 +295,58 @@ public class FbChatHelper {
 		switch(text)
 		{
 			case "MENU_TAXI":{
-				chatContext.index = 0;
+				chatContext.setIndex(0);
 				
 				try {
-					chatContext.taxi = Database.getTaxiContacts();
-				} catch (ExecutionException e) {	
-				e.printStackTrace();
+					chatContext.setTaxi(ServerData.getTaxiContacts()); 
+				} 
+				catch (ExecutionException e) {	
+					e.printStackTrace();
 				}
 				
-				setTaxi(chatContext.taxi);
-				chatContext.context = "MENU_TAXI_1";
+				setTaxi(chatContext.getTaxi());
+				chatContext.setContext("MENU_TAXI_1");
 				break;
 			}
 			case "MENU_AUTOBUS":{
-				chatContext.index = 0;
-				chatContext.context = "MENU_AUTOBUS_1";
+				chatContext.setIndex(0);
+				chatContext.setContext("MENU_AUTOBUS_1");
 				break;
 			}
 			case "MENU_TRENI":{
-				chatContext.index = 0;
-				chatContext.context = "MENU_TRENI_1";
+				chatContext.setIndex(0);
+				chatContext.setContext("MENU_TRENI_1");
 				break;
 			}
 			case "MENU_PARCHEGGI":{
-				chatContext.index = 0;
+				chatContext.setIndex(0);
 				
 				try {
-					chatContext.parcheggi = Database.getParkings();
+					chatContext.setParcheggi(ServerData.getParkings());
 				} catch (ExecutionException e) {
 					e.printStackTrace();
 				}
 				
-				setParcheggi(chatContext.parcheggi);
-				chatContext.context = "MENU_PARCHEGGI_1";
+				setParcheggi(chatContext.getParcheggi());
+				chatContext.setContext("MENU_PARCHEGGI_1");
 				break;
 			}
 			case "MENU_BICI":{
-				chatContext.index = 0;
+				chatContext.setIndex(0);
 				
 				try {
-					chatContext.parcheggiBici = Database.getBikeSharings();
+					chatContext.setParcheggiBici(ServerData.getBikeSharings());
 				} catch (ExecutionException e) {
 					e.printStackTrace();
 				}
 				
-				setParcheggiBici(chatContext.parcheggiBici);
-				chatContext.context = "MENU_BICI_1";
+				setParcheggiBici(chatContext.getParcheggiBici());
+				chatContext.setContext("MENU_BICI_1");
 				break;
 			}
 			default:{}
 		}
+		updateChatContext(chatContext);
 	}
 
 	/**
@@ -380,44 +366,44 @@ public class FbChatHelper {
 		FbProfile profile = getObjectFromUrl(link, FbProfile.class);*/
 		
 		//Se l'utente manda un messaggio prima di aver scelto qualcosa dal menu genera un messaggio di errore
-		if(chatContext.context.equals("generale")){
+		if(chatContext.getContext().equals("generale")){
 			replies.add(makeMessage(senderId, "Comando non riconosciuto"));	
 		}
 		
 		//dopo aver scelto la fascia oraria stampa gli orari
-		if(chatContext.context.equals("MENU_FUNIVIA_2")){
-			chatContext.fascia = text;
+		if(chatContext.getContext().equals("MENU_FUNIVIA_2")){
+			chatContext.setFascia(text);
 			replies.add(makeMessage(senderId, getOrariFunivia(senderId, chatContext, text)));
 			
 			replies.add(makeMessage(senderId, "Seleziona una voce del menù per scegliere che servizio utilizzare"));
-			chatContext.context = "MENU_FUNIVIA_3";
+			chatContext.setContext("MENU_FUNIVIA_3");
 		}
 		
 		//dopo aver scelto la direzione stampa della quickReplies che chiedono di scegliere una fascia oraria
-		if(chatContext.context.equals("MENU_FUNIVIA_1")){
+		if(chatContext.getContext().equals("MENU_FUNIVIA_1")){
 			if(text.equals("Trento - Sardagna"))
-				chatContext.direzione = true;
+				chatContext.setDirezione(true);
 			else
-				chatContext.direzione = false;
+				chatContext.setDirezione(false);
 			
 			getFuniviaID(chatContext);
 			
 			replies.add(makeQuick(senderId, getQuickMessage(1, chatContext)));
-			chatContext.context = "MENU_FUNIVIA_2";
+			chatContext.setContext("MENU_FUNIVIA_2");
 		}
 		
 		//Stampo gli orari controllando che non sia necessario stampare altre quickReplies(in caso le fermate fossero più di 10) 
-		if(chatContext.context.equals("MENU_AUTOBUS_5") || ((((!(text.equals("Altro.."))) && chatContext.index > 0)) && (chatContext.context.equals("MENU_AUTOBUS_4")))){
+		if(chatContext.getContext().equals("MENU_AUTOBUS_5") || ((((!(text.equals("Altro.."))) && chatContext.getIndex() > 0)) && (chatContext.getContext().equals("MENU_AUTOBUS_4")))){
 			replies.add(makeMessage(senderId, getOrariAutobus(senderId, chatContext, text)));
 			
 			replies.add(makeMessage(senderId, "Seleziona una voce del menù per scegliere che servizio utilizzare"));
-			chatContext.context = "MENU_AUTOBUS_6";
+			chatContext.setContext("MENU_AUTOBUS_6");
 		}
 		
 		//Cerco nell'elenco di fermate del bus quelle in cui è contenuta la parola  inserita precedentemente e stampo ogni fermata in una quikReply, in caso non ce ne fossero stampo un messaggio di errore
-		if(chatContext.context.equals("MENU_AUTOBUS_4")){
-			if(chatContext.index == 0)
-				chatContext.text = text;
+		if(chatContext.getContext().equals("MENU_AUTOBUS_4")){
+			if(chatContext.getIndex() == 0)
+				chatContext.setText(text);
 			
 			stops = stopsSearcher(chatContext);
 
@@ -428,57 +414,57 @@ public class FbChatHelper {
 		}
 		
 		//Salvo la fascia desiderata e chuiedo per che fermata si vogliono sapere gli orari
-		if(chatContext.context.equals("MENU_AUTOBUS_3")){
-			chatContext.fascia = text;
+		if(chatContext.getContext().equals("MENU_AUTOBUS_3")){
+			chatContext.setFascia(text);
 			replies.add(makeMessage(senderId, "Di che fermata desideri sapere gli orari?"));
 		
-			chatContext.context = "MENU_AUTOBUS_4";
+			chatContext.setContext("MENU_AUTOBUS_4");
 		}
 		
 		//Una volta scelta la direzione la salvo e creo l'oggetto autobus, chiedo per che fascia oraria stampare gli orari ed in caso in bus fosse monodirezionale salto entro direttamente senza fare il punto precedente 
-		if(chatContext.context.equals("MENU_AUTOBUS_2") || busMonodirezionali.contains(text)){
+		if(chatContext.getContext().equals("MENU_AUTOBUS_2") || busMonodirezionali.contains(text)){
 			if(busMonodirezionali.contains(text)){
-				chatContext.busID = text;
-				chatContext.context = "MENU_AUTOBUS_2";
+				chatContext.setBusID(text); 
+				chatContext.setContext("MENU_AUTOBUS_2");
 			}	
 			else{
 				if(text.equals("Andata"))
-					chatContext.direzione = true;
+					chatContext.setDirezione(true); 
 				else
-					chatContext.direzione = false;
+					chatContext.setDirezione(false); 
 			}
 			
 			try {
-				String routeId = Database.getAutobusRouteId(chatContext.busID, chatContext.direzione);
-				chatContext.autobus = Database.getAutobusTimetable(routeId);
+				String routeId = ServerData.getAutobusRouteId(chatContext.getbusID(), chatContext.getDirezione());
+				chatContext.setAutobus(ServerData.getAutobusTimetable(routeId));
 			} catch (ExecutionException e) {
-				// TODO Auto-generated catch block
+				
 				e.printStackTrace();
 			}
 			
 			replies.add(makeQuick(senderId, getQuickMessage(1, chatContext)));
-			chatContext.context = "MENU_AUTOBUS_3";	
+			chatContext.setContext("MENU_AUTOBUS_3"); 	
 		}	
 		
 		//Salva il bus scelto e stampa delle Quick che chiedono di scegliere la direzione
-		if(chatContext.context.equals("MENU_AUTOBUS_1")){
-			chatContext.busID = text;		
+		if(chatContext.getContext().equals("MENU_AUTOBUS_1")){
+			chatContext.setBusID(text); 	
 			replies.add(makeQuick(senderId, getQuickMessage(0, chatContext)));	
-			chatContext.context = "MENU_AUTOBUS_2";
+			chatContext.setContext("MENU_AUTOBUS_2"); 
 		}
 		
 		//Stampo gli orari controllando che non sia necessario stampare altre quickReplies(in caso le fermate fossero più di 10) 
-		if(chatContext.context.equals("MENU_TRENI_5") || ((((!(text.equals("Altro.."))) && chatContext.index > 0)) && (chatContext.context.equals("MENU_TRENI_4")))){
+		if(chatContext.getContext().equals("MENU_TRENI_5") || ((((!(text.equals("Altro.."))) && chatContext.getIndex() > 0)) && (chatContext.getContext().equals("MENU_TRENI_4")))){
 			replies.add(makeMessage(senderId, getOrariTreni(senderId, chatContext, text)));
 			
 			replies.add(makeMessage(senderId, "Seleziona una voce del menù per scegliere che servizio utilizzare"));
-			chatContext.context = "MENU_AUTOBUS_6";
+			chatContext.setContext("MENU_AUTOBUS_6");
 		}
 		
 		//Cerco nell'elenco di fermate del treno quelle in cui è contenuta la parola  inserita precedentemente e stampo ogni fermata in una quikReply, in caso non ce ne fossero stampo un messaggio di errore
-		if(chatContext.context.equals("MENU_TRENI_4")){
-			if(chatContext.index == 0)
-				chatContext.text = text;
+		if(chatContext.getContext().equals("MENU_TRENI_4")){
+			if(chatContext.getIndex() == 0)
+				chatContext.setText(text);
 			
 			stops = stopsSearcher(chatContext);
 
@@ -489,25 +475,27 @@ public class FbChatHelper {
 		}
 		
 		//Salvo la fascia desiderata e chuiedo per che fermata si vogliono sapere gli orari
-		if(chatContext.context.equals("MENU_TRENI_3")){
-			chatContext.fascia = text;
+		if(chatContext.getContext().equals("MENU_TRENI_3")){
+			chatContext.setFascia(text);
 			replies.add(makeMessage(senderId, "Di che fermata desideri sapere gli orari?"));
 			
-			chatContext.context = "MENU_TRENI_4";
+			chatContext.setContext("MENU_TRENI_4"); 
 		}
 		
 		//Trovo l'ID del treno, creo l'oggetto treni e stampo delle QuickRplies in cui chiedo di scegliere una fascia oraria
-		if(chatContext.context.equals("MENU_TRENI_2")){
+		if(chatContext.getContext().equals("MENU_TRENI_2")){
 			trainId(senderId, text, chatContext);
 			try {
-				chatContext.treni = Database.getTrainTimetable(chatContext.trainID);
+				chatContext.setTreni( ServerData.getTrainTimetable(chatContext.getTrainID()));
 			} catch (ExecutionException e) {
-				// TODO Auto-generated catch block
+				
 				e.printStackTrace();
 			}
 			replies.add(makeQuick(senderId, getQuickMessage(1, chatContext)));
-			chatContext.context = "MENU_TRENI_3";
+			chatContext.setContext("MENU_TRENI_3");
 		}
+		
+		updateChatContext(chatContext);
 		
 		return replies;
 	}
@@ -517,10 +505,10 @@ public class FbChatHelper {
 	 * @param chatContext
 	 */
 	public void getFuniviaID(ChatContext chatContext){		
-		if(chatContext.direzione)
-			chatContext.FuniviaID = "FunA";
+		if(chatContext.getDirezione())
+			chatContext.setFuniviaID("FunA");
 		else
-			chatContext.FuniviaID = "FunR";		
+			chatContext.setFuniviaID("FunR");	
 	}
 	
 	
@@ -575,15 +563,15 @@ public class FbChatHelper {
 	private List<String> stopsSearcher(ChatContext chatcontext){
 		List<String> stops = new ArrayList<>();
 
-		if(chatcontext.context.equals("MENU_AUTOBUS_4")){
-			for(int i = 0; i < chatcontext.autobus.getStops().size(); i++){
-				if(chatcontext.autobus.getStops().get(i).toLowerCase().contains(chatcontext.text.toLowerCase()))
-					stops.add(chatcontext.autobus.getStops().get(i));
+		if(chatcontext.getContext().equals("MENU_AUTOBUS_4")){
+			for(int i = 0; i < chatcontext.getAutobus().getStops().size(); i++){
+				if(chatcontext.getAutobus().getStops().get(i).toLowerCase().contains(chatcontext.getText().toLowerCase()))
+					stops.add(chatcontext.getAutobus().getStops().get(i));
 			}
-		} else if(chatcontext.context.equals("MENU_TRENI_4")){
-			for(int i = 0; i < chatcontext.treni.getStops().size(); i++){
-				if(chatcontext.treni.getStops().get(i).toLowerCase().contains(chatcontext.text.toLowerCase()))
-					stops.add(chatcontext.treni.getStops().get(i));
+		} else if(chatcontext.getContext().equals("MENU_TRENI_4")){
+			for(int i = 0; i < chatcontext.getTreni().getStops().size(); i++){
+				if(chatcontext.getTreni().getStops().get(i).toLowerCase().contains(chatcontext.getText().toLowerCase()))
+					stops.add(chatcontext.getTreni().getStops().get(i));
 			}
 		}
 		
@@ -601,12 +589,12 @@ public class FbChatHelper {
 		String msg = "Questa funivia non esiste";
 		
 		try {
-			chatContext.autobus = Database.getAutobusTimetable(chatContext.FuniviaID);
+			chatContext.setAutobus(ServerData.getAutobusTimetable(chatContext.getFuniviaID()));
 		} catch (ExecutionException e) {
-			// TODO Auto-generated catch block
+			
 			e.printStackTrace();
 		}
-		msg = timePrinter(senderId, chatContext.autobus, Integer.parseInt(chatContext.fascia.substring(0, 2)), Integer.parseInt(chatContext.fascia.substring(3, 5)), text);
+		msg = timePrinter(senderId, chatContext.getAutobus(), Integer.parseInt(chatContext.getFascia().substring(0, 2)), Integer.parseInt(chatContext.getFascia().substring(3, 5)), text);
 		
 		return msg;
 	}
@@ -622,13 +610,13 @@ public class FbChatHelper {
 		String msg = "Questo autobus non esiste (in caso di autobus  \"/\" digitare solo il bus di riferimento)";
 		
 		try {
-			String routeId = Database.getAutobusRouteId(chatContext.busID, chatContext.direzione);
-			chatContext.autobus = Database.getAutobusTimetable(routeId);
+			String routeId = ServerData.getAutobusRouteId(chatContext.getbusID(), chatContext.getDirezione());
+			chatContext.setAutobus(ServerData.getAutobusTimetable(routeId));
 		} catch (ExecutionException e) {
-			// TODO Auto-generated catch block
+			
 			e.printStackTrace();
 		}
-		msg = timePrinter(senderId, chatContext.autobus, Integer.parseInt(chatContext.fascia.substring(0, 2)), Integer.parseInt(chatContext.fascia.substring(3, 5)), text);
+		msg = timePrinter(senderId, chatContext.getAutobus(), Integer.parseInt(chatContext.getFascia().substring(0, 2)), Integer.parseInt(chatContext.getFascia().substring(3, 5)), text);
 		
 		return msg;
 	}
@@ -644,12 +632,12 @@ public class FbChatHelper {
 		String msg = "Questo treno non esiste";
 		
 		try {
-			chatContext.autobus = Database.getTrainTimetable(chatContext.trainID);
+			chatContext.setAutobus(ServerData.getTrainTimetable(chatContext.getTrainID())); 
 		} catch (ExecutionException e) {
-			// TODO Auto-generated catch block
+			
 			e.printStackTrace();
 		}
-		msg = timePrinter(senderId, chatContext.treni, Integer.parseInt(chatContext.fascia.substring(0, 2)), Integer.parseInt(chatContext.fascia.substring(3, 5)), text);
+		msg = timePrinter(senderId, chatContext.getTreni(), Integer.parseInt(chatContext.getFascia().substring(0, 2)), Integer.parseInt(chatContext.getFascia().substring(3, 5)), text);
 		
 		return msg;
 	}
@@ -797,7 +785,7 @@ public class FbChatHelper {
 	private List<QuickReply> getQuickReplies(ChatContext chatContext){
 		List<QuickReply> quick = new ArrayList<>();
 		
-		if(chatContext.context.equals("MENU_AUTOBUS_1")){
+		if(chatContext.getContext().equals("MENU_AUTOBUS_1")){
 			QuickReply qAndata = new QuickReply();
 			quick.add(qAndata);
 			qAndata.setType("text");
@@ -811,7 +799,7 @@ public class FbChatHelper {
 			qRitorno.setPayload("Ritorno");
 		}
 		
-		if(chatContext.context.equals("MENU_AUTOBUS_2") || chatContext.context.equals("MENU_TRENI_2") || chatContext.context.equals("MENU_FUNIVIA_1")){
+		if(chatContext.getContext().equals("MENU_AUTOBUS_2") || chatContext.getContext().equals("MENU_TRENI_2") || chatContext.getContext().equals("MENU_FUNIVIA_1")){
 			QuickReply fascia1 = new QuickReply();
 			quick.add(fascia1);
 			fascia1.setType("text");
@@ -855,13 +843,13 @@ public class FbChatHelper {
 			fascia7.setPayload("22-24");
 		}
 		
-		if(chatContext.context.equals("MENU_AUTOBUS_4") || chatContext.context.equals("MENU_TRENI_4")){
+		if(chatContext.getContext().equals("MENU_AUTOBUS_4") || chatContext.getContext().equals("MENU_TRENI_4")){
 			List<String> stops = new ArrayList<String>();
 			
 			stops = stopsSearcher(chatContext);
 	
-			for(int i = 0; i < 9 && chatContext.index < stops.size(); chatContext.index++, i++){
-				String title = stops.get(chatContext.index);
+			for(int i = 0; i < 9 && chatContext.getIndex() < stops.size(); chatContext.setIndex(chatContext.getIndex() + 1), i++){
+				String title = stops.get(chatContext.getIndex());
 				
 				if(title.length() >= 20)
 					title = stringCut(title);
@@ -873,7 +861,7 @@ public class FbChatHelper {
 				stop.setPayload(title);
 			}
 			
-			if(chatContext.index < stops.size() && chatContext.index < stops.size()){
+			if(chatContext.getIndex() < stops.size() && chatContext.getIndex() < stops.size()){
 				QuickReply altro = new QuickReply();
 				quick.add(altro);
 				altro.setType("text");
@@ -881,14 +869,14 @@ public class FbChatHelper {
 				altro.setPayload("Altro..");
 			}
 			else {
-				if(chatContext.context.equals("MENU_AUTOBUS_4"))
-					chatContext.context = "MENU_AUTOBUS_5";
+				if(chatContext.getContext().equals("MENU_AUTOBUS_4"))
+					chatContext.setContext("MENU_AUTOBUS_5"); 
 				else
-					chatContext.context = "MENU_TRENI_5";
+					chatContext.setContext("MENU_TRENI_5");
 			}
 		}
 			
-		if(chatContext.context.equals("MENU_TRENI_1")){
+		if(chatContext.getContext().equals("MENU_TRENI_1")){
 			QuickReply qBV = new QuickReply();
 			quick.add(qBV);
 			qBV.setType("text");
@@ -926,7 +914,7 @@ public class FbChatHelper {
 			qMT.setPayload("Malè - Trento");
 		}
 		
-		if(chatContext.context.equals("MENU_FUNIVIA")){
+		if(chatContext.getContext().equals("MENU_FUNIVIA")){
 			QuickReply fAndata = new QuickReply();
 			quick.add(fAndata);
 			fAndata.setType("text");
@@ -1019,8 +1007,8 @@ public class FbChatHelper {
 	private List<Element> getElementsTaxi(ChatContext chatContext) {
 		List<Element> elements = new ArrayList<>();
 		
-			for(; chatContext.index < chatContext.taxi.size(); chatContext.index++){
-				TitleSubTitle Taxi1 = optiontaxi.get(chatContext.index);
+			for(; chatContext.getIndex() < chatContext.getTaxi().size(); chatContext.setIndex(chatContext.getIndex() + 1)){
+				TitleSubTitle Taxi1 = optiontaxi.get(chatContext.getIndex());
 				Element element = new Element();
 				
 				elements.add(element);
@@ -1040,7 +1028,7 @@ public class FbChatHelper {
 	 */
 	private List<Element> getElementsParcheggi(ChatContext chatContext) {
 			List<Element> elements = new ArrayList<>();	
-			TitleSubTitle Parcheggi = optionparcheggi.get(chatContext.index);
+			TitleSubTitle Parcheggi = optionparcheggi.get(chatContext.getIndex());
 			
 			Element element = new Element();
 			
@@ -1058,7 +1046,7 @@ public class FbChatHelper {
 	 */
 	private List<Element> getElementsParcheggiBici(ChatContext chatContext) {
 			List<Element> elements = new ArrayList<>();	
-			TitleSubTitle Parcheggibici = optionparcheggibici.get(chatContext.index);
+			TitleSubTitle Parcheggibici = optionparcheggibici.get(chatContext.getIndex());
 			
 			Element element = new Element();
 			
@@ -1114,7 +1102,7 @@ public class FbChatHelper {
 	private List<Button> getButtons(ChatContext chatContext) {
 		List<Button> buttons = new ArrayList<>();
 
-		if(chatContext.context == "MENU_AUTOBUS_1"){
+		if(chatContext.getContext() == "MENU_AUTOBUS_1"){
 			Button bt = new Button();
 			buttons.add(bt);
 			bt.setType("postback");
@@ -1128,64 +1116,64 @@ public class FbChatHelper {
 			bt2.setPayload("MENU_FUNIVIA");
 		}
 		
-		if(chatContext.context == "MENU_TAXI_1"){
-			int i = chatContext.index;
-			while(i < chatContext.taxi.size()){
-				if(chatContext.taxi.get(i).getPhone() != null){
-					if(!chatContext.taxi.get(i).getPhone().get(i).isEmpty() && !chatContext.taxi.get(i).getSms().isEmpty()){
+		if(chatContext.getContext() == "MENU_TAXI_1"){
+			int i = chatContext.getIndex();
+			while(i < chatContext.getTaxi().size()){
+				if(chatContext.getTaxi().get(i).getPhone() != null){
+					if(!chatContext.getTaxi().get(i).getPhone().get(i).isEmpty() && !chatContext.getTaxi().get(i).getSms().isEmpty()){
 						Button bt1 = new Button();
 						buttons.add(bt1);
 						bt1.setType("phone_number");
-						bt1.setTitle(chatContext.taxi.get(i).getPhone().get(i).toString());
-						bt1.setPayload("+39" + chatContext.taxi.get(i).getPhone().get(i));
+						bt1.setTitle(chatContext.getTaxi().get(i).getPhone().get(i).toString());
+						bt1.setPayload("+39" + chatContext.getTaxi().get(i).getPhone().get(i));
 						Button bt3 = new Button();
 						buttons.add(bt3);
 						bt3.setType("phone_number");
 						bt3.setTitle("sms");
-						bt3.setPayload("+39" + chatContext.taxi.get(i).getSms());
+						bt3.setPayload("+39" + chatContext.getTaxi().get(i).getSms());
 						}
-					else if(chatContext.taxi.get(i).getPhone().get(1) != null && chatContext.taxi.get(i).getSms().isEmpty()){
+					else if(chatContext.getTaxi().get(i).getPhone().get(1) != null && chatContext.getTaxi().get(i).getSms().isEmpty()){
 						Button bt1 = new Button();
 						buttons.add(bt1);
 						bt1.setType("phone_number");
-						bt1.setTitle(chatContext.taxi.get(i).getPhone().get(0).toString());
-						bt1.setPayload("+39" + chatContext.taxi.get(i).getPhone());
+						bt1.setTitle(chatContext.getTaxi().get(i).getPhone().get(0).toString());
+						bt1.setPayload("+39" + chatContext.getTaxi().get(i).getPhone());
 						Button bt2 = new Button();
 						buttons.add(bt2);
 						bt2.setType("phone_number");
-						bt2.setTitle(chatContext.taxi.get(i).getPhone().get(1).toString());
-						bt2.setPayload("+39" + chatContext.taxi.get(i).getPhone().get(1));
+						bt2.setTitle(chatContext.getTaxi().get(i).getPhone().get(1).toString());
+						bt2.setPayload("+39" + chatContext.getTaxi().get(i).getPhone().get(1));
 						}
-					else if(chatContext.taxi.get(i).getPhone().get(1).isEmpty() && chatContext.taxi.get(i).getSms() != null){
+					else if(chatContext.getTaxi().get(i).getPhone().get(1).isEmpty() && chatContext.getTaxi().get(i).getSms() != null){
 						Button bt1 = new Button();
 						buttons.add(bt1);
 						bt1.setType("phone_number");
-						bt1.setTitle(chatContext.taxi.get(i).getPhone().get(i).toString());
-						bt1.setPayload("+39" + chatContext.taxi.get(i).getPhone());
+						bt1.setTitle(chatContext.getTaxi().get(i).getPhone().get(i).toString());
+						bt1.setPayload("+39" + chatContext.getTaxi().get(i).getPhone());
 						Button bt2 = new Button();
 						buttons.add(bt2);
 						bt2.setType("phone_number");
 						bt2.setTitle("sms");
-						bt2.setPayload("+39" + chatContext.taxi.get(i).getSms());
+						bt2.setPayload("+39" + chatContext.getTaxi().get(i).getSms());
 						}
-					else if(chatContext.taxi.get(i).getPhone().get(1).isEmpty() && chatContext.taxi.get(i).getSms().isEmpty()){
+					else if(chatContext.getTaxi().get(i).getPhone().get(1).isEmpty() && chatContext.getTaxi().get(i).getSms().isEmpty()){
 						Button bt1 = new Button();
 						buttons.add(bt1);
 						bt1.setType("phone_number");
-						bt1.setTitle(chatContext.taxi.get(i).getPhone().get(i).toString());
-						bt1.setPayload("+39" + chatContext.taxi.get(i).getPhone());
+						bt1.setTitle(chatContext.getTaxi().get(i).getPhone().get(i).toString());
+						bt1.setPayload("+39" + chatContext.getTaxi().get(i).getPhone());
 						}
 					}
-				else if(chatContext.taxi.get(i).getSms() != null){
+				else if(chatContext.getTaxi().get(i).getSms() != null){
 					Button bt1 = new Button();
 					buttons.add(bt1);
 					bt1.setType("phone_number");
 					bt1.setTitle("sms");
-					bt1.setPayload("+39" + chatContext.taxi.get(i).getSms());
+					bt1.setPayload("+39" + chatContext.getTaxi().get(i).getSms());
 				}
 				i++;
 				
-				return buttons;
+				break;
 			}
 		}
 		return buttons;
@@ -1214,7 +1202,7 @@ public class FbChatHelper {
 			}
 			in.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			
 			e.printStackTrace();
 		}
 		if (!StringUtils.isEmpty(jsonString)) {

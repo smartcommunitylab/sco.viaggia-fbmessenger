@@ -9,6 +9,11 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * 
+ * @author Ayoub50
+ *
+ */
 @Generated("org.jsonschema2pojo")
 public class QuickReply {
 

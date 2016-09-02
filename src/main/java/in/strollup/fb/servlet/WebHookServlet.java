@@ -2,11 +2,13 @@ package in.strollup.fb.servlet;
 
 import in.strollup.fb.contract.FbMsgRequest;
 import in.strollup.fb.contract.Messaging;
+import in.strollup.fb.contract.MongoDBJDBC;
 import in.strollup.fb.utils.FbChatHelper;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.UnknownHostException;
 import java.util.List;
 
 import javax.servlet.ServletException;
@@ -37,7 +39,7 @@ public class WebHookServlet extends HttpServlet {
 	private static final long serialVersionUID = -2326475169699351010L;
 
 	/************* FB Chat Bot variables *************************/
-	public static final String PAGE_TOKEN = "EAAXz3s158p4BAFDatZC5SCVpElg3UUdKDLDspBbn672w8UzfVIg85Ixp49stZBh4VdiVXKEbTZANot8J1SBy4kgfxV65mEpgw5JtOtiy4QFOZB0x53nZCcTE8Bx7ZAdkxoyeisPgmgtdqG1mUaujzZCcGmOwyBs7MYpTxoFsrjxGwZDZD";
+	public static final String PAGE_TOKEN = "EAAXrIT8AXGkBAAK1wTiUFqNRMHWkc0hMZA5AYR6Shk0qppt3LZCYwALe4ccrCnr5zcqygR5gMXdkoLhqZCjgq4Bpgjobtiv6ZBOposyDQT5Q4ZAfJQuMPBxXUzFepsZCKcQ8lePFGHHouIGHgBInpiJoYjmIQesG9ru04fM5kJGAZDZD";
 	private static final String VERIFY_TOKEN = "whatever_string_you_or_your_friends_wish";
 	private static final String FB_MSG_URL = "https://graph.facebook.com/v2.6/me/messages?access_token=" + PAGE_TOKEN;
 	/*************************************************************/
@@ -45,9 +47,11 @@ public class WebHookServlet extends HttpServlet {
 	/******* for making a post call to fb messenger api **********/
 	private static final HttpClient client = HttpClientBuilder.create().build();
 	private static final HttpPost httppost = new HttpPost(FB_MSG_URL);
-	private static final FbChatHelper helper = new FbChatHelper();
+	private static FbChatHelper helper = null;
 	/*************************************************************/
 
+	private MongoDBJDBC mongoDBJDBC;
+	
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		processRequest(request, response);
@@ -138,33 +142,33 @@ public class WebHookServlet extends HttpServlet {
 	 * @param isPostBack
 	 */
 	
-	public void sendTextMessage(String senderId, String text, boolean isPostBack) {
-		List<String> jsonReplies = null;
-		
-		if (isPostBack) {
-			jsonReplies = helper.getPostBackReplies(senderId, text);
-		} 
-		else {
-			jsonReplies = helper.getReplies(senderId, text);
-		}
+	public void sendTextMessage(final String senderId, final String text, final boolean isPostBack) {
+				List<String> jsonReplies = null;
+				
+				if (isPostBack) {
+					jsonReplies = helper.getPostBackReplies(senderId, text);
+				} 
+				else {
+					jsonReplies = helper.getReplies(senderId, text);
+				}
 
-		for (String jsonReply : jsonReplies) {
-			try {
-				System.out.println("jsonreplies:" + jsonReply);
-				HttpEntity entity = new ByteArrayEntity(
-						jsonReply.getBytes("UTF-8"));
-				httppost.setEntity(entity);
-				HttpResponse response = client.execute(httppost);
-				String result = EntityUtils.toString(response.getEntity());
-				System.out.println(result);
-			} catch (UnsupportedEncodingException e) {
-				e.printStackTrace();
-			} catch (ClientProtocolException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
+				for (String jsonReply : jsonReplies) {
+					try {
+						System.out.println("jsonreplies:" + jsonReply);
+						HttpEntity entity = new ByteArrayEntity(
+								jsonReply.getBytes("UTF-8"));
+						httppost.setEntity(entity);
+						HttpResponse response = client.execute(httppost);
+						String result = EntityUtils.toString(response.getEntity());
+						System.out.println(result);
+					} catch (UnsupportedEncodingException e) {
+						e.printStackTrace();
+					} catch (ClientProtocolException e) {
+						e.printStackTrace();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
 	}
 	
 	@Override
@@ -175,6 +179,8 @@ public class WebHookServlet extends HttpServlet {
 	@Override
 	public void init() throws ServletException {
 		httppost.setHeader("Content-Type", "application/json");
+		mongoDBJDBC = new MongoDBJDBC();
+		helper = new FbChatHelper(mongoDBJDBC);
 		System.out.println("webhook servlet created!!");
 	}
 }
